@@ -5,7 +5,7 @@ import * as Yup from "yup";
 import { Button, Container, TextField, Typography } from "@mui/material";
 import Box from "@mui/material/Box";
 import Alert from '@mui/material/Alert';
-
+import { Link } from "react-router-dom";
 
 function Register() {
   const inisialValues = {
@@ -105,7 +105,12 @@ function Register() {
           onBlur={formik.handleBlur}
           type="password"
         />
-        <Button sx={{ marginTop: "1.5rem" }} variant="contained" type="submit">Register</Button>
+        <Box sx={{ textAlign: "center", display: "flex", flexDirection: "column",justifyContent:"space-between" }}>
+        <Button sx={{ marginTop: "1.5rem" }} variant="contained" type="submit">
+          Register
+        </Button>
+        <Link to="/login"><Button sx={{ marginTop: "1.5rem",color:"primary.light" }} variant="text">Existing User | Login Hare</Button></Link>
+        </Box>
       </Box>
     </Container>
   );

@@ -3,9 +3,15 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import { Button, Container, TextField, Typography } from "@mui/material";
 import Box from "@mui/material/Box";
-import Alert from "@mui/material/Alert";
 import axios from "axios";
+import { useDispatch } from "react-redux";
+import { SnackbarActions } from "../../store/SnackbarSlice";
+import { AuthActions } from "../../store/AuthSlice";
+import { Link, useNavigate } from "react-router-dom";
 function Login() {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
   const initialValues = {
     email: "",
     password: "",
@@ -24,14 +30,15 @@ function Login() {
           "http://localhost:3001/users/login",
           values
         );
-        <Alert variant="filled" severity="success">
-          {res.data.message}
-        </Alert>;
+       dispatch(SnackbarActions.openSnackbar({message:res.data.message,severity:"success"}));
+       dispatch(AuthActions.login(res.data.accessToken));
+       localStorage.setItem("token",res.data.accessToken);
+       localStorage.setItem("isLoggedIn",res.data.success);
+      
+       navigate("/home");
       } catch (err) {
-        console.log(err);
-        <Alert variant="filled" severity="error">
-          {err.message}
-        </Alert>;
+        console.log("error",err);
+        dispatch(SnackbarActions.openSnackbar({message:err.response.data.message,severity:"error"}));
       }
     },
   });
@@ -84,9 +91,13 @@ function Login() {
           onBlur={formik.handleBlur}
           type="password"
         />
+        <Box sx={{ textAlign: "center", display: "flex", flexDirection: "column",justifyContent:"space-between" }}>
         <Button sx={{ marginTop: "1.5rem" }} variant="contained" type="submit">
           Login
         </Button>
+        <Link to="/register"><Button sx={{ marginTop: "1.5rem",color:"primary.light" }} variant="text">New User | Register Hare</Button></Link>
+        </Box>
+
       </Box>
     </Container>
   );
