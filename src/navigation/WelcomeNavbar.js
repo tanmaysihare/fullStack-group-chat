@@ -6,9 +6,19 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
-import { Link } from 'react-router-dom';
-
+import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { AuthActions } from '../store/AuthSlice';
  function WelcomeNavbar() {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const isLoggedIn = useSelector((state) => state.auth.isAuthenticated);
+    const logoutHandler = () => {
+        dispatch(AuthActions.logout());
+        localStorage.removeItem("token");
+        localStorage.removeItem("isLoggedIn");
+        navigate("/login");
+    }
   return (
     <Box sx={{ flexGrow: 1 }}>
       <AppBar position="static">
@@ -23,10 +33,11 @@ import { Link } from 'react-router-dom';
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            News
+            Group Chat
           </Typography>
-          <Link to="/login"><Button variant='text' sx={{color:"primary.light"}}>Login</Button></Link>
-          <Link to="/register"><Button color="primary">Register</Button></Link>
+         {!isLoggedIn && <Link to="/login"><Button variant='text' sx={{color:"primary.light"}}>Login</Button></Link>} 
+         {!isLoggedIn && <Link to="/register"><Button color="primary">Register</Button></Link>}
+         {isLoggedIn && <Button variant='outlined' onClick={logoutHandler} sx={{color:"primary.light"}}>Log Out</Button>} 
         </Toolbar>
       </AppBar> 
     </Box>

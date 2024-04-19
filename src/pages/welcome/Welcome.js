@@ -1,11 +1,9 @@
 import React from "react";
-import WelcomeNavbar from "../../navigation/WelcomeNavbar";
 import { Box, Typography } from "@mui/material";
 import QuestionAnswerIcon from "@mui/icons-material/QuestionAnswer";
 function Welcome() {
   return (
     <>
-      <WelcomeNavbar />
       <Box sx={{ display: "flex", alignItems: "center" }}>
         <QuestionAnswerIcon color="primary" sx={{ fontSize: "42rem",zIndex:"0" }} />
         <Typography
