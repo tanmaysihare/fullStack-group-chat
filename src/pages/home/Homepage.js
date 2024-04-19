@@ -11,8 +11,33 @@ function Homepage() {
   
   const token =
   useSelector((state) => state.auth.token) || localStorage.getItem("token") ;
+  // Function to store a message in local storage
+function storeMessage(message) {
+  // Retrieve existing messages from local storage
+  let messages = JSON.parse(localStorage.getItem('messages')) || [];
+  
+  // Add the new message to the beginning of the array
+  messages.unshift(message);
+  
+  // Ensure that only the latest 10 messages are stored
+  if (messages.length > 10) {
+      messages = messages.slice(0, 10);
+  }
+  
+  // Store the updated messages back in local storage
+  localStorage.setItem('messages', JSON.stringify(messages));
+}
+
+// Function to retrieve messages from local storage
+function getMessages() {
+  return JSON.parse(localStorage.getItem('messages')) || [];
+}
+
   useEffect(() => {
     const messages = async () => {
+      let localMsg = getMessages();
+    console.log("localmsg",localMsg);
+     setMessage(localMsg);
       try {
         const res = await axios.get("http://localhost:3001/messages/getMessages", {
           headers: { "access-token": token },
@@ -38,6 +63,8 @@ const formik = useFormik({
   validationSchema: validationSchema,
   onSubmit: async (values) => {
     console.log(values);
+    storeMessage(values.message);
+   
     try {
        await axios.post(
         "http://localhost:3001/messages/sendMessage",values ,
@@ -45,15 +72,17 @@ const formik = useFormik({
           headers: { "access-token": token },
         }
       );
-      try {
-        const res = await axios.get("http://localhost:3001/messages/getMessages", {
-          headers: { "access-token": token },
-        });
-        setMessage(await res.data.messages);
-        console.log("set Message",res.data);
-      } catch (error) {
-        console.log(error);
-      }
+     
+    
+      // try {
+      //   const res = await axios.get("http://localhost:3001/messages/getMessages", {
+      //     headers: { "access-token": token },
+      //   });
+      //   setMessage(await res.data.messages);
+      //   console.log("set Message",res.data);
+      // } catch (error) {
+      //   console.log(error);
+      // }
     } catch (error) {
       console.log(error);
     }
@@ -71,9 +100,8 @@ const formik = useFormik({
         padding: "1rem",
         marginTop: "2.5rem",
       }}
-    >
-      <Box sx={{ flexGrow: 1 }}>
-        <Typography
+    > 
+    <Typography
           variant="h4"
           sx={{
             textAlign: "center",
@@ -85,7 +113,9 @@ const formik = useFormik({
         >
           Group Chat App
         </Typography>
-
+      <Box sx={{ flexGrow: 1 ,overflowY:"auto"}}>
+       
+          {console.log(message)}
         {message.map((value,key)=>{
           return(
             <Box
@@ -93,14 +123,14 @@ const formik = useFormik({
               sx={{
                 display: "flex",
                 alignItems: "center",
-                marginBottom: "1rem",
+                marginBottom: "0.35rem",
                 bgcolor: "primary.dark",
                 borderRadius: "0.5rem",
-                padding: "0.5rem",
+                padding: "0.1rem",
               }}
             >
               <Typography
-                variant="h6"
+                variant="body1"
                 sx={{
                   textAlign: "center",
                   fontWeight: "bold",
@@ -111,14 +141,14 @@ const formik = useFormik({
                 {value.UserId}
               </Typography>
               <Typography
-                variant="h6"
+                variant="body1"
                 sx={{
                   textAlign: "center",
                   fontWeight: "bold",
                   color: "primary.light",
                 }}
               >
-                {value.message}
+                { value.message || value}
               </Typography>
             </Box>
           )
@@ -134,7 +164,10 @@ const formik = useFormik({
           padding: "0.5rem",
         }}
         component="form"
-        onSubmit={formik.handleSubmit}
+        onSubmit={()=>{ 
+          formik.handleSubmit();
+        //  formik.resetForm();
+        }}
       >
         <TextField
           fullWidth
@@ -155,7 +188,7 @@ const formik = useFormik({
           onBlur={formik.handleBlur}
           onFocus={formik.handleFocus}
           autoComplete="off"
-          onReset={formik.handleReset}
+          
         />
         <Button
           variant="contained"
