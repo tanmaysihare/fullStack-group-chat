@@ -9,14 +9,17 @@ import MenuIcon from '@mui/icons-material/Menu';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { AuthActions } from '../store/AuthSlice';
+import { userDetailAction } from '../store/UserDetailSlice';
  function WelcomeNavbar() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const isLoggedIn = useSelector((state) => state.auth.isAuthenticated);
     const logoutHandler = () => {
         dispatch(AuthActions.logout());
+        dispatch(userDetailAction.deleteUserName());
         localStorage.removeItem("token");
         localStorage.removeItem("isLoggedIn");
+        localStorage.removeItem("currentUserName");
         navigate("/login");
     }
   return (

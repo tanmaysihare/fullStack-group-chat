@@ -7,6 +7,7 @@ import axios from "axios";
 import { useDispatch } from "react-redux";
 import { SnackbarActions } from "../../store/SnackbarSlice";
 import { AuthActions } from "../../store/AuthSlice";
+import { userDetailAction } from "../../store/UserDetailSlice";
 import { Link, useNavigate } from "react-router-dom";
 function Login() {
   const dispatch = useDispatch();
@@ -30,10 +31,13 @@ function Login() {
           "http://localhost:3001/users/login",
           values
         );
+       console.log("response after login",res);
        dispatch(SnackbarActions.openSnackbar({message:res.data.message,severity:"success"}));
        dispatch(AuthActions.login(res.data.accessToken));
+       dispatch(userDetailAction.enterUserName({userName:res.data.user}));
        localStorage.setItem("token",res.data.accessToken);
        localStorage.setItem("isLoggedIn",res.data.success);
+       localStorage.setItem("currentUserName",res.data.user);
       
        navigate("/home");
       } catch (err) {

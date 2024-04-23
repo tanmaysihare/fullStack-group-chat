@@ -4,10 +4,13 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import { Button, Container, TextField, Typography } from "@mui/material";
 import Box from "@mui/material/Box";
-import Alert from '@mui/material/Alert';
-import { Link } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { SnackbarActions } from "../../store/SnackbarSlice";
+import { Link,useNavigate } from "react-router-dom";
 
 function Register() {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   const inisialValues = {
     name: "",
     email: "",
@@ -27,14 +30,12 @@ function Register() {
       console.log(values);
       try{
         const res = await axios.post("http://localhost:3001/users/register",values);
-        <Alert variant="filled" severity="success">
-          {res.data.message}
-        </Alert>
+        dispatch(SnackbarActions.openSnackbar({message: res.data.message,severity:"success"}));
+        navigate('/login');
       }catch(err){
         console.log(err);
-        <Alert variant="filled" severity="error">
-          {err.message}
-        </Alert>
+        dispatch(SnackbarActions.openSnackbar({message: err.res.data.message,severity:"error"}));
+
       }
     },
   });
