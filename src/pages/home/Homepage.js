@@ -6,21 +6,28 @@ import {
   Container,
   Button,
   Grid,
+  IconButton,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { useSelector } from "react-redux";
 import axios from "axios";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import Groups from "./Groups";
+import io from "socket.io-client";
+import SendDocs from "./SendDocs";
 
 function Homepage() {
   const [message, setMessage] = useState([]);
+  const [messageList, setMessageList] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const token =
     useSelector((state) => state.auth.token) || localStorage.getItem("token");
   const groupId = useSelector((state) => state.userDetail.currentGroupId);
   const groupName = useSelector((state) => state.userDetail.currentGroupName);
+  const socket = io.connect("http://localhost:3001");
+
   useEffect(() => {
     const fetchMessages = async () => {
       try {
@@ -35,6 +42,30 @@ function Homepage() {
     };
     fetchMessages();
   }, [token, groupId]);
+  
+  useEffect(() => {
+    const fetchMsg = async () => {
+      socket.on("newMessage", (message) => {
+        // Check if the message already exists in the message list
+        const messageExists = messageList.some((msg) => msg.id === message.id);
+  
+        // If the message doesn't exist, add it to the message list
+        if (!messageExists) {
+          setMessageList((prevMessages) => [...prevMessages, message]);
+          console.log(message);
+        }
+      });
+    };
+  
+    fetchMsg();
+  
+    // Clean up the event listener when the component unmounts
+    return () => {
+      socket.off("newMessage");
+    };
+  }, [socket, messageList]); // Re-run effect if socket or messageList change
+  
+  
 
   const initialValues = {
     message: "",
@@ -49,18 +80,51 @@ function Homepage() {
     validationSchema: validationSchema,
     onSubmit: async (values) => {
       try {
-        await axios.post(
+        const res = await axios.post(
           `http://localhost:3001/messages/sendMessage/${groupId}`,
           values,
           { headers: { "access-token": token } }
         );
         formik.resetForm();
+        // try {
+        //   const res = await axios.get(
+        //     `http://localhost:3001/messages/getMessages/${groupId}`,
+        //     { headers: { "access-token": token } }
+        //   );
+        //   setMessage(res.data.messages);
+        // } catch (error) {
+        //   console.log(error);
+        // }
+      const newMessage = {
+          message: res.data.message.message,
+          senderName: res.data.message.senderName,
+          groupId: res.data.message.GroupId,
+        };
+        setMessage((msgs) => [...msgs, newMessage]);
+           socket.emit("message", newMessage);
+         //  socket.emit('joinRoom', res.data.message.GroupId)
       } catch (error) {
         console.log(error);
       }
+   
     },
   });
-
+  const isUrl = (str) => {
+    // Regular expression to match URL pattern
+    const urlPattern = /^(https?:\/\/)?([\w.-]+)\.([a-z]{2,})(\/\S*)?$/i;
+    return urlPattern.test(str);
+  };
+  const refreshHandler = async()=>{
+    try {
+      const res = await axios.get(
+        `http://localhost:3001/messages/getMessages/${groupId}`,
+        { headers: { "access-token": token } }
+      );
+      setMessage(res.data.messages);
+    } catch (error) {
+      console.log(error);
+    }
+  }
   return (
     <Container
       maxWidth="md"
@@ -86,25 +150,48 @@ function Homepage() {
       >
         Group Chat App
       </Typography>
-      <Grid container  direction="row">
-
-        <Grid item md={3.5} >
-          <Groups setSelectedGroup={setSelectedGroup} />
+      <Grid container direction="row">
+        <Grid item md={3.5}>
+          <Groups setSelectedGroup={setSelectedGroup} socket={socket} />
         </Grid>
         <Grid
           item
           md={8}
           marginTop={"0.5rem"}
           marginLeft={"0.5rem"}
-          sx={{ display: "flex", flexDirection: "column",bgcolor:"primary.light", borderRadius: "1rem", padding: "1rem",}}
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            bgcolor: "primary.light",
+            borderRadius: "1rem",
+            padding: "1rem",
+          }}
         >
-          <Box sx={{display:"flex", justifyContent:"space-between",borderBottom:"2px solid teal",marginBottom:"0.3rem"}}>
-          <Typography variant="h6" color={"primary.dark"} >Group Name : </Typography>
-            <Typography variant="h5" color={"primary.main"} marginRight={"2rem"} fontWeight={"bold"} sx={{fontVariant:"small-caps"}}>{groupName}</Typography>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              borderBottom: "2px solid teal",
+              marginBottom: "0.3rem",
+            }}
+          >
+            <Typography variant="h6" color={"primary.dark"}>
+              Group Name :{" "}
+            </Typography>
+            <Typography
+              variant="h5"
+              color={"primary.main"}
+              marginRight={"2rem"}
+              fontWeight={"bold"}
+              sx={{ fontVariant: "small-caps" }}
+            >
+              {groupName}
+            </Typography>
+            <IconButton onClick={() => refreshHandler()}><RefreshIcon color="primary" fontSize="large" /></IconButton>
           </Box>
-          
+
           {selectedGroup && (
-            <Box sx={{ flexGrow: 1, overflowY: "auto" }}>
+            <Box sx={{ flexGrow: 1, overflowY: "auto", height: "45vh" }}>
               {message.map((value, key) => (
                 <Box
                   key={key}
@@ -112,7 +199,7 @@ function Homepage() {
                     display: "flex",
                     alignItems: "center",
                     marginBottom: "0.35rem",
-                   // bgcolor: "primary.dark",
+                    // bgcolor: "primary.dark",
                     borderRadius: "0.5rem",
                     padding: "0.1rem",
                   }}
@@ -137,7 +224,13 @@ function Homepage() {
                       color: "primary.contrastText",
                     }}
                   >
-                    {value.message}
+                    {isUrl(value.message) ? (
+                      <img
+                        src={value.message}
+                        alt="Document"
+                        style={{ maxWidth: "100px" }}
+                      />
+                    ) : ( value.message)}
                   </Typography>
                 </Box>
               ))}
@@ -173,6 +266,7 @@ function Homepage() {
                 onFocus={formik.handleFocus}
                 autoComplete="off"
               />
+
               <Button
                 variant="contained"
                 color="primary"
@@ -183,6 +277,20 @@ function Homepage() {
               >
                 SEND
               </Button>
+            </Box>
+          )}
+          {selectedGroup && (
+            <Box
+              sx={{
+                display: "flex",
+                bgcolor: "primary.dark",
+                textAlign: "center",
+                justifyContent: "center",
+                borderRadius: "0.5rem",
+                marginTop: "0.5rem",
+              }}
+            >
+              <SendDocs setMessage={setMessage} />
             </Box>
           )}
         </Grid>

@@ -21,6 +21,7 @@ import * as Yup from "yup";
 import axios from "axios";
 import { useSelector, useDispatch } from "react-redux";
 import { userDetailAction } from "../../store/UserDetailSlice";
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
@@ -35,6 +36,9 @@ function Groups(props) {
   const token =
     useSelector((state) => state.auth.token) || localStorage.getItem("token");
   const currentGroupId = useSelector((state) => state.userDetail.currentGroupId);
+  const currentGroupName = useSelector((state) => state.userDetail.currentGroupName);
+ 
+
   useEffect(() => {
     const fetchGroups = async () => {
       try {
@@ -48,7 +52,22 @@ function Groups(props) {
       }
     };
     fetchGroups();
+   
   }, [token]);
+  useEffect(() => {
+    const fetchGroups = async () => {
+       props.socket.on('newGroup',(groupName)=>{
+       setGroups((oldGroups)=>[...oldGroups,groupName.name]);
+    });
+    props.socket.on('newGroupToUser',(data)=>{
+       setGroups((oldGroups)=>[...oldGroups,data.name]);
+      });
+    return () =>{
+      props.socket.disconnect();
+    };
+    };
+   fetchGroups();
+  },[props.socket]);
   const handleClickOpen = () => {
     setOpen(true);
   };
@@ -87,9 +106,19 @@ function Groups(props) {
         const res = await axios.post(
           "http://localhost:3001/groups/createGroup",
           values,
-          { headers: { "access-token": token } }
+          { headers: { "access-token": token } } 
         );
         console.log(res);
+        try {
+          const res = await axios.get("http://localhost:3001/groups/getGroups", {
+            headers: { "access-token": token },
+          });
+          setGroups(res.data.groups);
+          //  console.log(res.data.groups);
+        } catch (error) {
+          console.log(error);
+        }
+        props.socket.emit('group',{name:values.groupName});
         formik.resetForm();
         // Close the dialog
         handleClose();
@@ -131,16 +160,29 @@ function Groups(props) {
 
     const addUserHandler = async (values) => {
       try {
-        const res = await axios.post(
+       await axios.post(
           `http://localhost:3001/addAndSearch/addUsers/${currentGroupId}`,
           values,
           { headers: { "access-token": token } }
         );
-        console.log(res);
+       
+        props.socket.emit('addUser',{name:currentGroupName});
+        //console.log(currentGroupName);
       } catch (error) {
         console.log(error);
       }
     };
+    const refreshHandler = async()=>{
+      try {
+        const res = await axios.get("http://localhost:3001/groups/getGroups", {
+          headers: { "access-token": token },
+        });
+        setGroups(res.data.groups);
+        //  console.log(res.data.groups);
+      } catch (error) {
+        console.log(error);
+      }
+    }
   return (
     <Container
       maxWidth="xs"
@@ -162,6 +204,7 @@ function Groups(props) {
           borderBottom: "2px solid teal",
         }}
       >
+        <IconButton onClick={() => refreshHandler()}><RefreshIcon color="secondary" fontSize="small" /></IconButton>
         <Typography
           variant="h6"
           sx={{
@@ -171,7 +214,7 @@ function Groups(props) {
             color: "primary.contrastText",
           }}
         >
-          Group Names
+          Groups
         </Typography>
         <IconButton
           onClick={handleClickOpen}
@@ -180,7 +223,7 @@ function Groups(props) {
           <AddIcon />
         </IconButton>
       </Box>
-      <Box>
+      <Box sx={{ height: "100%", overflowY: "auto" }}>
         {groups.map((value, key) => (
           <Box
             key={key}
@@ -204,7 +247,7 @@ function Groups(props) {
                 marginX: "0.5rem",
               }}
             >
-              {value.name}
+               {value.name}
             </Button>
             <IconButton
               onClick={handleClickUserOpen}
